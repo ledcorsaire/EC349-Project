@@ -1,0 +1,111 @@
+---
+title: "Assignment Report"
+author: "ID:2102296"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+
+
+
+
+
+
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+In this project, I use a classification tree model to predict the stars given by a user i to business j. My model achieves a 57% accuracy in predicting the stars a user will give a business, which is nearly 3 times higher than the accuracy of a random guess.  
+
+```{r cars}
+summary(cars)
+```
+## Choice of predictor variables and preparation of training and test datasets
+
+In my model, I have chosen 3 predictor variables: User i’s average review rating, Business j’s average review rating, and User i’s text comments. The choice to include these variables comes from previous research done in the field of feedback analysis. (Ganu, Elhadad and Marian, 2009)
+
+Since I used the smaller user data and reviews data to save computational memory, some users in the review data did not have their average ratings in the user data. Hence, I had to merge the 2 dataframes using the user data, and then remove observations that did not have reviews. This does not introduce any bias into the dataset as both the user data and review data were produced from a random selection from the main dataset. This narrowed the size of the training set to 269878. I was conscious of the fact that a smaller number of observations would increase the confidence interval of results. However, I made the decision to carry on with this reduced training dataset for 2 reasons. 
+
+Firstly, I believed that the variable was important because a user is unlikely to deviate too much from their average rating regardless of the actual objective rating of their experience. (A user with an average rating of 4 might give an unhappy experience a 3 while a user with an average rating of 2 might give the same unhappy experience a rating of 1) (Duan et al., 2021) 
+
+Secondly, a reduced training set reduced strain on computing power, which was already proving to be an issue. 
+
+To get sentiment scores from text reviews, I used R’s syuzhet package which assigns scores based on sentiments observed from the review. I treated this score as a continuous variable. 
+
+
+
+
+```{echo=FALSE}
+
+source("/Users/manas/Desktop/Uni/Study/Year 3/EC349 Data Science for Economists/EC349_rscript.R")
+library(ggplot2)
+
+ggplot(final_training_dataset, aes(x=stars)) + 
+  geom_bar() +
+  labs(title="Distribution of stars", x="Ratings", y="Frequency") +
+  theme_minimal()
+
+```
+
+
+## Reasons for choice of Data Science Methodology 
+
+I have chosen a decision tree model for this project as our dependent variable is the number of stars a user will give. This is a categorical variable with 5 values. Classification trees naturally support this type of variable in analysis, making it a good choice. 
+
+Decision trees can also naturally model interactions between variables without requiring explicit specification. For example, the effect of sentiment scores on the number of stars might depend on the user's average stars; a decision tree can automatically detect and leverage such interactions.
+
+I used R’s randomForest package to construct the model. The function builds multiple decision trees and merges them together to get a more accurate and stable prediction. Each tree is grown on a different bootstrap sample of the training data. The model is known to work well with classification task as well. (Ali et al, 2012). The only constraint with the function is that it takes up a lot of computational memory. 
+
+
+## Analysis of results in training dataset
+
+From a graph of the stars given by users in the training dataset, we can see that the distribution of ratings is not even, with there being a higher frequency of 5 stars given. Hence, the data is skewed, which could increase node impurity because the proportion of training observations from each rating is not equal. More ‘5’ ratings are likely to end up in each classification. 
+
+The randomforest model tries to correct this imbalance by giving some predictor variables more importance than others to make sure that only one classification reaches a node, which ultimately increases model accuracy on unseen data. This ultimately decreases the Gini Index of the model, a key metric used to evaluate node impurity. 
+ 
+In this model, a user’s average star rating is given more importance in order to minimize node impurity. The results can be found below. 
+
+The main method to analyse the model in the training dataset was the overall OOB (out of bag) error rate of the model. The OOB rate is calculated by using observations that were not used to grow a tree in the random forest as a test set for the tree. This is a useful metric because it tells us what to expect when we use the model to predict unseen data, which is the goal of this assignment. When experimenting with different combinations of predictor variables, this one yielded the lowest out of bag error rate (0.422). 
+
+From 10-fold cross-validation, we verify that alpha = 2 (number of variables considered for splitting at each node) is the ideal parameter setting to give highest accuracy. 
+
+
+## Analysis of results in test dataset 
+To analyse this, I looked at the confusion matrix associated with the model and test dataset. The matrix consists of many important metrics.
+
+The overall accuracy is 57.47%. As mentioned earlier, due to fewer observations in the training set, the 95% confidence interval of the accuracy is a percent each way. (56.4-58.4). 
+
+From the confusion matrix, it appears that the model best predicts 1 and 5 star ratings. This might be a symptom of the sentiment scores. A very high or very low sentiment score probably correlates to a 1 or 5 star rating. It is possible that this arises due to the sentiment scores being inaccurately high or low. A very negative score would be a strong indicator for 1 star while a very high score would indicate 5 stars. There might be more overlap in the sentiment scores for 2,3,4 star predictions.  The user average scores serves to mitigate this to some extent, as illustrated by its importance in the model. 
+
+This could also be due to the skew of both datasets. The model might be biased to predict 5-star ratings. This might explain why the model is most sensitive to 5-star ratings. Even though there is no selection bias due to random assignment into the training dataset, the model is still biased towards predicting 5-star reviews since both datasets are skewed.
+
+In future analysis, we could use a more even dataset even if it not randomly generated. Introducing bias into the model from non-random selection will reduce the variance in prediction probability by class since the model is trained over an even set of ratings.
+
+
+
+## Main Challenge
+
+I found the computational requirements of the project to be the most challenging aspect of the project. Due to memory and CPU restrictions, I found balancing the number of observations in analysis with the overall accuracy and variance of the model to be difficult. 
+
+Firstly, I could not access the main user and review dataframes as my computer was unable to load the data. This meant I had to use the smaller dataframe from the getgo. My training set was further reduced because there wasn’t a 100% overlap in the review and user data. 
+
+Secondly, sentiment analysis was computationally expensive. I also found that time taken for analysis gets exponentially longer with increasing observations. (500000 observations took around 15 minutes whereas 1.4 million did not complete in an hour). 
+
+Finally, the randomForest model took up a lot of memory and this constricted me to using 3 predictor variables only. 
+
+Ultimately, I decided to narrow down the training dataset and include user average stars for every review. My hope was that the accuracy lost by reducing number of observations would be balanced by the accuracy gained in adding user average stars. 
+
+
+
+
+## References
+
+1)	Gayatree Ganu, Noémie Elhadad and Marian, A. (2009). Beyond the Stars: Improving Rating Predictions using Review Text Content. International Workshop on the Web and Databases.
+
+2)	Duan, L., Gao, T., Ni, W. and Wang, W. (2021). A hybrid intelligent service recommendation by latent semantics and explicit ratings. International Journal of Intelligent Systems, 36(12), pp.7867–7894. doi:https://doi.org/10.1002/int.22612.
+
+3)	Ali, J., Khan, R., Ahmad, N. and Maqsood, I. (2012). Random forests and decision trees. International Journal of Computer Science Issues (IJCSI), 9(5), p.272.
+
